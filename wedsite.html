@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Cool Chat Room</title>
+<title>Laptop Friendly Cool Chat</title>
 <style>
-/* Body & background */
+/* Responsive body & background */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
@@ -19,19 +19,21 @@ body {
 /* Header */
 h1 {
   margin: 20px;
+  font-size: 2rem;
   text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
 }
 
 /* Chat container */
 .chat-container {
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
   border-radius: 15px;
   padding: 20px;
   width: 90%;
-  max-width: 600px;
+  max-width: 900px; /* wider for laptop */
   flex: 1;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 /* Messages list */
@@ -43,20 +45,22 @@ h1 {
   overflow-y: auto;
 }
 
+/* Message bubbles */
 #messages li {
-  background: rgba(255,255,255,0.1);
-  padding: 10px 15px;
+  padding: 12px 18px;
   border-radius: 12px;
   margin-bottom: 10px;
-  box-shadow: 1px 1px 5px rgba(0,0,0,0.3);
   word-wrap: break-word;
-  max-width: 80%;
+  max-width: 70%;
   display: inline-block;
+  color: #fff;
+  transition: background-color 0.5s, opacity 0.5s;
+  box-shadow: 1px 1px 5px rgba(0,0,0,0.3);
+  font-size: 1.1rem; /* bigger font for laptop */
 }
 
 /* Own messages */
 #messages li.self {
-  background: rgba(255,255,255,0.2);
   align-self: flex-end;
   text-align: right;
 }
@@ -78,18 +82,17 @@ form {
 
 input {
   flex: 1;
-  padding: 12px;
+  padding: 14px;
   border-radius: 10px 0 0 10px;
   border: none;
   outline: none;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 button {
-  padding: 12px 20px;
+  padding: 14px 25px;
   border-radius: 0 10px 10px 0;
   border: none;
-  background: #ff5e62;
   background: linear-gradient(45deg,#ff5e62,#ff9966);
   color: #fff;
   font-weight: bold;
@@ -98,71 +101,89 @@ button {
 }
 
 button:hover {
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-/* Timestamps */
 .timestamp {
   display: block;
-  font-size: 0.7em;
+  font-size: 0.75em;
   color: #ccc;
   margin-top: 2px;
+}
+
+#typing {
+  font-style: italic;
+  color: #ffd700;
+  margin: 5px 0;
+  min-height: 20px;
+}
+
+/* Laptop-specific adjustments */
+@media (min-width: 768px) {
+  #messages li {
+    max-width: 60%;
+    font-size: 1.2rem;
+  }
+  input {
+    font-size: 1.1rem;
+  }
+  button {
+    font-size: 1.1rem;
+  }
 }
 </style>
 </head>
 <body>
-<h1>Cool Chat Room</h1>
+<h1>Cool Chat - Laptop Friendly</h1>
 <div class="chat-container">
   <ul id="messages"></ul>
+  <div id="typing"></div>
   <form id="form">
     <input id="input" autocomplete="off" placeholder="Type your message..." />
     <button>Send</button>
   </form>
 </div>
 
-<!-- Socket.IO -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-// Elements
 const messages = document.getElementById("messages");
 const form = document.getElementById("form");
 const input = document.getElementById("input");
+const typingDiv = document.getElementById("typing");
 
-// Random color for user
 function randomColor() {
   const colors = ["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#845EC2","#FF9671","#00C9A7"];
   return colors[Math.floor(Math.random()*colors.length)];
 }
 
-// Prompt username
 let username = "";
-while(!username) {
-  username = prompt("Enter your username:");
-}
+while(!username) username = prompt("Enter your username:");
 const userColor = randomColor();
 
-// Connect to public Socket.IO demo server
 const socket = io("https://socket-io-chat-demo.herokuapp.com/");
-
-// Notify join
 socket.emit("chat message", `${username} has joined the chat`);
-socket.emit("user-joined", username);
 
-// Send message
+let typingTimeout;
+input.addEventListener("input", () => {
+  socket.emit("typing", username);
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => socket.emit("stopTyping", username), 1000);
+});
+
 form.addEventListener("submit", e => {
   e.preventDefault();
   if(input.value){
     const msg = { user: username, text: input.value, color: userColor };
     socket.emit("chat message", msg);
     input.value = "";
+    socket.emit("stopTyping", username);
   }
 });
 
 // Receive messages
 socket.on("chat message", data => {
   const li = document.createElement("li");
-  
-  // Handle join/leave string messages
+
   if(typeof data === "string") {
     li.className = "join-leave";
     li.textContent = data;
@@ -175,14 +196,36 @@ socket.on("chat message", data => {
     li.appendChild(timestamp);
 
     li.style.backgroundColor = data.color;
+    li.style.color = "#fff";
     if(data.user === username) li.classList.add("self");
   }
 
   messages.appendChild(li);
   messages.scrollTop = messages.scrollHeight;
+
+  // Smooth fading
+  const allMsgs = messages.querySelectorAll("li");
+  allMsgs.forEach((msg, i) => {
+    const fade = 1 - (allMsgs.length - i - 1) * 0.05;
+    msg.style.opacity = fade < 0.3 ? 0.3 : fade;
+  });
 });
 
-// Detect when user closes tab and notify leave
+// Typing indicator
+let typingUsers = [];
+socket.on("typing", user => {
+  if(!typingUsers.includes(user) && user !== username) typingUsers.push(user);
+  updateTyping();
+});
+socket.on("stopTyping", user => {
+  typingUsers = typingUsers.filter(u => u!==user);
+  updateTyping();
+});
+function updateTyping() {
+  if(typingUsers.length === 0) typingDiv.textContent = "";
+  else typingDiv.textContent = typingUsers.join(", ") + " is typing...";
+}
+
 window.addEventListener("beforeunload", () => {
   socket.emit("chat message", `${username} has left the chat`);
 });
