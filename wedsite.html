@@ -1,498 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gun Game - FPS</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            overflow: hidden;
-            padding: 20px;
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 1000px;
-            text-align: center;
-        }
-        
-        header {
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            color: #ff5252;
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 20px;
-        }
-        
-        .game-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1.2rem;
-        }
-        
-        .stat {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #ff5252;
-        }
-        
-        .game-area {
-            position: relative;
-            width: 100%;
-            height: 500px;
-            background: #1e1e2e;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-        
-        .target {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            background: radial-gradient(circle, #ff5252 0%, #b33939 100%);
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 0 15px rgba(255, 82, 82, 0.7);
-            transition: transform 0.2s;
-            user-select: none;
-        }
-        
-        .target:hover {
-            transform: scale(1.1);
-        }
-        
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 40px;
-            height: 40px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 100;
-        }
-        
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-        }
-        
-        .crosshair::before {
-            width: 4px;
-            height: 24px;
-            top: 8px;
-            left: 18px;
-        }
-        
-        .crosshair::after {
-            width: 24px;
-            height: 4px;
-            top: 18px;
-            left: 8px;
-        }
-        
-        .gun {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 3rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            z-index: 10;
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        button {
-            background: #ff5252;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-        }
-        
-        button:hover {
-            background: #ff7b7b;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        
-        .instructions {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: left;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        
-        .instructions h3 {
-            margin-bottom: 10px;
-            color: #ff5252;
-        }
-        
-        .instructions ul {
-            list-style-position: inside;
-            padding-left: 10px;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
-        }
-        
-        .bullet-hole {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-        
-        .hit-effect {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            background: radial-gradient(circle, rgba(255, 82, 82, 0.8) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: fadeOut 0.5s forwards;
-        }
-        
-        @keyframes fadeOut {
-            from { opacity: 1; transform: scale(0.5); }
-            to { opacity: 0; transform: scale(1.5); }
-        }
-        
-        .game-over {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-            display: none;
-        }
-        
-        .game-over h2 {
-            font-size: 3rem;
-            color: #ff5252;
-            margin-bottom: 20px;
-        }
-        
-        .game-over p {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-        }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .game-area {
-                height: 400px;
-            }
-            
-            .target {
-                width: 50px;
-                height: 50px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Cool Chat Room</title>
+<style>
+/* Body & background */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  color: #fff;
+}
+
+/* Header */
+h1 {
+  margin: 20px;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+/* Chat container */
+.chat-container {
+  background: rgba(0,0,0,0.4);
+  border-radius: 15px;
+  padding: 20px;
+  width: 90%;
+  max-width: 600px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Messages list */
+#messages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+#messages li {
+  background: rgba(255,255,255,0.1);
+  padding: 10px 15px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  box-shadow: 1px 1px 5px rgba(0,0,0,0.3);
+  word-wrap: break-word;
+  max-width: 80%;
+  display: inline-block;
+}
+
+/* Own messages */
+#messages li.self {
+  background: rgba(255,255,255,0.2);
+  align-self: flex-end;
+  text-align: right;
+}
+
+/* Join/leave messages */
+#messages li.join-leave {
+  background: rgba(255,255,255,0.2);
+  text-align: center;
+  font-style: italic;
+  max-width: 100%;
+  align-self: center;
+}
+
+/* Form */
+form {
+  display: flex;
+  margin-top: 10px;
+}
+
+input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px 0 0 10px;
+  border: none;
+  outline: none;
+  font-size: 16px;
+}
+
+button {
+  padding: 12px 20px;
+  border-radius: 0 10px 10px 0;
+  border: none;
+  background: #ff5e62;
+  background: linear-gradient(45deg,#ff5e62,#ff9966);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+
+/* Timestamps */
+.timestamp {
+  display: block;
+  font-size: 0.7em;
+  color: #ccc;
+  margin-top: 2px;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Gun Game</h1>
-            <p class="subtitle">Aim and shoot at the targets before time runs out!</p>
-        </header>
-        
-        <div class="game-stats">
-            <div class="stat">
-                <span>SCORE</span>
-                <span class="stat-value" id="score">0</span>
-            </div>
-            <div class="stat">
-                <span>TARGETS LEFT</span>
-                <span class="stat-value" id="targets-left">20</span>
-            </div>
-            <div class="stat">
-                <span>TIME</span>
-                <span class="stat-value" id="time">60</span>
-            </div>
-            <div class="stat">
-                <span>ACCURACY</span>
-                <span class="stat-value" id="accuracy">100%</span>
-            </div>
-        </div>
-        
-        <div class="game-area" id="game-area">
-            <div class="crosshair"></div>
-            <div class="gun">🔫</div>
-            
-            <div class="game-over" id="game-over">
-                <h2>GAME OVER</h2>
-                <p>Final Score: <span id="final-score">0</span></p>
-                <p>Accuracy: <span id="final-accuracy">100%</span></p>
-                <button onclick="startGame()">PLAY AGAIN</button>
-            </div>
-        </div>
-        
-        <div class="controls">
-            <button onclick="startGame()">START GAME</button>
-            <button onclick="togglePause()" id="pause-btn">PAUSE</button>
-        </div>
-        
-        <div class="instructions">
-            <h3>How to Play:</h3>
-            <ul>
-                <li>Move your mouse to aim at the targets</li>
-                <li>Click to shoot at the targets</li>
-                <li>Each hit gives you 10 points</li>
-                <li>Destroy all targets before time runs out</li>
-                <li>Be accurate - your accuracy is being measured!</li>
-            </ul>
-        </div>
-    </div>
+<h1>Cool Chat Room</h1>
+<div class="chat-container">
+  <ul id="messages"></ul>
+  <form id="form">
+    <input id="input" autocomplete="off" placeholder="Type your message..." />
+    <button>Send</button>
+  </form>
+</div>
 
-    <script>
-        // Game variables
-        let score = 0;
-        let timeLeft = 60;
-        let targetsLeft = 20;
-        let shotsFired = 0;
-        let shotsHit = 0;
-        let gameInterval;
-        let targetInterval;
-        let isPaused = false;
-        let gameActive = false;
-        
-        // DOM elements
-        const gameArea = document.getElementById('game-area');
-        const scoreElement = document.getElementById('score');
-        const targetsLeftElement = document.getElementById('targets-left');
-        const timeElement = document.getElementById('time');
-        const accuracyElement = document.getElementById('accuracy');
-        const gameOverScreen = document.getElementById('game-over');
-        const finalScoreElement = document.getElementById('final-score');
-        const finalAccuracyElement = document.getElementById('final-accuracy');
-        const pauseButton = document.getElementById('pause-btn');
-        
-        // Start the game
-        function startGame() {
-            // Reset variables
-            score = 0;
-            timeLeft = 60;
-            targetsLeft = 20;
-            shotsFired = 0;
-            shotsHit = 0;
-            isPaused = false;
-            gameActive = true;
-            
-            // Update UI
-            scoreElement.textContent = score;
-            targetsLeftElement.textContent = targetsLeft;
-            timeElement.textContent = timeLeft;
-            accuracyElement.textContent = '100%';
-            gameOverScreen.style.display = 'none';
-            pauseButton.textContent = 'PAUSE';
-            
-            // Clear game area
-            const targets = document.querySelectorAll('.target');
-            targets.forEach(target => target.remove());
-            
-            const bulletHoles = document.querySelectorAll('.bullet-hole');
-            bulletHoles.forEach(hole => hole.remove());
-            
-            // Start timers
-            clearInterval(gameInterval);
-            clearInterval(targetInterval);
-            
-            gameInterval = setInterval(updateTimer, 1000);
-            targetInterval = setInterval(createTarget, 1000);
-            
-            // Create initial targets
-            for (let i = 0; i < 5; i++) {
-                createTarget();
-            }
-        }
-        
-        // Update game timer
-        function updateTimer() {
-            if (isPaused) return;
-            
-            timeLeft--;
-            timeElement.textContent = timeLeft;
-            
-            if (timeLeft <= 0) {
-                endGame();
-            }
-        }
-        
-        // Create a new target
-        function createTarget() {
-            if (isPaused || !gameActive) return;
-            
-            if (targetsLeft <= 0) {
-                return;
-            }
-            
-            const target = document.createElement('div');
-            target.className = 'target';
-            
-            // Random position
-            const x = Math.random() * (gameArea.offsetWidth - 60);
-            const y = Math.random() * (gameArea.offsetHeight - 100);
-            
-            target.style.left = `${x}px`;
-            target.style.top = `${y}px`;
-            
-            // Add click event
-            target.addEventListener('click', targetHit);
-            
-            gameArea.appendChild(target);
-        }
-        
-        // Handle target hit
-        function targetHit(e) {
-            if (isPaused || !gameActive) return;
-            
-            // Update score
-            score += 10;
-            shotsFired++;
-            shotsHit++;
-            targetsLeft--;
-            
-            // Update UI
-            scoreElement.textContent = score;
-            targetsLeftElement.textContent = targetsLeft;
-            accuracyElement.textContent = Math.round((shotsHit / shotsFired) * 100) + '%';
-            
-            // Create hit effect
-            const hitEffect = document.createElement('div');
-            hitEffect.className = 'hit-effect';
-            hitEffect.style.left = (e.pageX - 40) + 'px';
-            hitEffect.style.top = (e.pageY - 40) + 'px';
-            document.body.appendChild(hitEffect);
-            
-            // Remove hit effect after animation
-            setTimeout(() => {
-                hitEffect.remove();
-            }, 500);
-            
-            // Remove target
-            e.target.remove();
-            
-            // Check for win condition
-            if (targetsLeft <= 0) {
-                endGame();
-            }
-        }
-        
-        // Handle shooting
-        gameArea.addEventListener('click', (e) => {
-            if (isPaused || !gameActive) return;
-            
-            // Create bullet hole
-            const bulletHole = document.createElement('div');
-            bulletHole.className = 'bullet-hole';
-            bulletHole.style.left = (e.pageX - 5) + 'px';
-            bulletHole.style.top = (e.pageY - 5) + 'px';
-            document.body.appendChild(bulletHole);
-            
-            shotsFired++;
-            accuracyElement.textContent = Math.round((shotsHit / shotsFired) * 100) + '%';
-            
-            // Play shooting sound (would need to add audio element for full implementation)
-        });
-        
-        // End the game
-        function endGame() {
-            gameActive = false;
-            clearInterval(gameInterval);
-            clearInterval(targetInterval);
-            
-            // Show game over screen
-            gameOverScreen.style.display = 'flex';
-            finalScoreElement.textContent = score;
-            finalAccuracyElement.textContent = Math.round((shotsHit / shotsFired) * 100) + '%';
-        }
-        
-        // Toggle pause
-        function togglePause() {
-            if (!gameActive) return;
-            
-            isPaused = !isPaused;
-            pauseButton.textContent = isPaused ? 'RESUME' : 'PAUSE';
-            
-            if (isPaused) {
-                // Add blur effect to game area
-                gameArea.style.filter = 'blur(5px)';
-            } else {
-                // Remove blur effect
-                gameArea.style.filter = 'none';
-            }
-        }
-        
-        // Initialize the game
-        window.onload = function() {
-            // Display instructions but don't start game automatically
-        };
-    </script>
+<!-- Socket.IO -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+// Elements
+const messages = document.getElementById("messages");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+
+// Random color for user
+function randomColor() {
+  const colors = ["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#845EC2","#FF9671","#00C9A7"];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+
+// Prompt username
+let username = "";
+while(!username) {
+  username = prompt("Enter your username:");
+}
+const userColor = randomColor();
+
+// Connect to public Socket.IO demo server
+const socket = io("https://socket-io-chat-demo.herokuapp.com/");
+
+// Notify join
+socket.emit("chat message", `${username} has joined the chat`);
+socket.emit("user-joined", username);
+
+// Send message
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  if(input.value){
+    const msg = { user: username, text: input.value, color: userColor };
+    socket.emit("chat message", msg);
+    input.value = "";
+  }
+});
+
+// Receive messages
+socket.on("chat message", data => {
+  const li = document.createElement("li");
+  
+  // Handle join/leave string messages
+  if(typeof data === "string") {
+    li.className = "join-leave";
+    li.textContent = data;
+  } else {
+    li.textContent = `${data.user}: ${data.text}`;
+    const timestamp = document.createElement("span");
+    timestamp.className = "timestamp";
+    const time = new Date();
+    timestamp.textContent = time.getHours().toString().padStart(2,'0') + ":" + time.getMinutes().toString().padStart(2,'0');
+    li.appendChild(timestamp);
+
+    li.style.backgroundColor = data.color;
+    if(data.user === username) li.classList.add("self");
+  }
+
+  messages.appendChild(li);
+  messages.scrollTop = messages.scrollHeight;
+});
+
+// Detect when user closes tab and notify leave
+window.addEventListener("beforeunload", () => {
+  socket.emit("chat message", `${username} has left the chat`);
+});
+</script>
 </body>
 </html>
