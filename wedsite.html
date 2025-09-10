@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Laptop Friendly Cool Chat</title>
+<title>GitHub Pages Chat</title>
 <style>
-/* Responsive body & background */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
@@ -15,28 +14,22 @@ body {
   margin: 0;
   color: #fff;
 }
-
-/* Header */
 h1 {
   margin: 20px;
   font-size: 2rem;
   text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
 }
-
-/* Chat container */
 .chat-container {
   background: rgba(0,0,0,0.5);
   border-radius: 15px;
   padding: 20px;
   width: 90%;
-  max-width: 900px; /* wider for laptop */
+  max-width: 900px;
   flex: 1;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
-
-/* Messages list */
 #messages {
   list-style: none;
   padding: 0;
@@ -44,8 +37,6 @@ h1 {
   flex: 1;
   overflow-y: auto;
 }
-
-/* Message bubbles */
 #messages li {
   padding: 12px 18px;
   border-radius: 12px;
@@ -56,16 +47,12 @@ h1 {
   color: #fff;
   transition: background-color 0.5s, opacity 0.5s;
   box-shadow: 1px 1px 5px rgba(0,0,0,0.3);
-  font-size: 1.1rem; /* bigger font for laptop */
+  font-size: 1.1rem;
 }
-
-/* Own messages */
 #messages li.self {
   align-self: flex-end;
   text-align: right;
 }
-
-/* Join/leave messages */
 #messages li.join-leave {
   background: rgba(255,255,255,0.2);
   text-align: center;
@@ -73,13 +60,10 @@ h1 {
   max-width: 100%;
   align-self: center;
 }
-
-/* Form */
 form {
   display: flex;
   margin-top: 10px;
 }
-
 input {
   flex: 1;
   padding: 14px;
@@ -88,7 +72,6 @@ input {
   outline: none;
   font-size: 1rem;
 }
-
 button {
   padding: 14px 25px;
   border-radius: 0 10px 10px 0;
@@ -99,42 +82,28 @@ button {
   cursor: pointer;
   transition: 0.3s;
 }
-
-button:hover {
-  opacity: 0.85;
-}
-
+button:hover { opacity: 0.85; }
 .timestamp {
   display: block;
   font-size: 0.75em;
   color: #ccc;
   margin-top: 2px;
 }
-
 #typing {
   font-style: italic;
   color: #ffd700;
   margin: 5px 0;
   min-height: 20px;
 }
-
-/* Laptop-specific adjustments */
 @media (min-width: 768px) {
-  #messages li {
-    max-width: 60%;
-    font-size: 1.2rem;
-  }
-  input {
-    font-size: 1.1rem;
-  }
-  button {
-    font-size: 1.1rem;
-  }
+  #messages li { max-width: 60%; font-size: 1.2rem; }
+  input { font-size: 1.1rem; }
+  button { font-size: 1.1rem; }
 }
 </style>
 </head>
 <body>
-<h1>Cool Chat - Laptop Friendly</h1>
+<h1>GitHub Pages Chat</h1>
 <div class="chat-container">
   <ul id="messages"></ul>
   <div id="typing"></div>
@@ -144,49 +113,58 @@ button:hover {
   </form>
 </div>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<!-- Ably Realtime SDK -->
+<script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
 <script>
 const messages = document.getElementById("messages");
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const typingDiv = document.getElementById("typing");
 
+// Replace this with your Ably API Key
+const ably = new Ably.Realtime("YOUR_ABLY_API_KEY");
+const channel = ably.channels.get("chat-room");
+
+// Random color for user
 function randomColor() {
   const colors = ["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#845EC2","#FF9671","#00C9A7"];
   return colors[Math.floor(Math.random()*colors.length)];
 }
 
+// Ask for username
 let username = "";
 while(!username) username = prompt("Enter your username:");
 const userColor = randomColor();
 
-const socket = io("https://socket-io-chat-demo.herokuapp.com/");
-socket.emit("chat message", `${username} has joined the chat`);
+// Send join message
+channel.publish("chat", {user: username, text: `${username} has joined the chat`, type: "join"});
 
+// Track typing
 let typingTimeout;
 input.addEventListener("input", () => {
-  socket.emit("typing", username);
+  channel.publish("typing", {user: username});
   clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => socket.emit("stopTyping", username), 1000);
+  typingTimeout = setTimeout(() => channel.publish("stopTyping", {user: username}), 1000);
 });
 
+// Send message
 form.addEventListener("submit", e => {
   e.preventDefault();
   if(input.value){
-    const msg = { user: username, text: input.value, color: userColor };
-    socket.emit("chat message", msg);
+    channel.publish("chat", {user: username, text: input.value, color: userColor, type: "message"});
     input.value = "";
-    socket.emit("stopTyping", username);
+    channel.publish("stopTyping", {user: username});
   }
 });
 
-// Receive messages
-socket.on("chat message", data => {
+// Receive chat messages
+channel.subscribe("chat", (msg) => {
   const li = document.createElement("li");
-
-  if(typeof data === "string") {
+  const data = msg.data;
+  
+  if(data.type === "join" || data.type === "leave") {
     li.className = "join-leave";
-    li.textContent = data;
+    li.textContent = data.text;
   } else {
     li.textContent = `${data.user}: ${data.text}`;
     const timestamp = document.createElement("span");
@@ -203,31 +181,252 @@ socket.on("chat message", data => {
   messages.appendChild(li);
   messages.scrollTop = messages.scrollHeight;
 
-  // Smooth fading
+  // Smooth fading older messages
   const allMsgs = messages.querySelectorAll("li");
-  allMsgs.forEach((msg, i) => {
+  allMsgs.forEach((msg,i) => {
     const fade = 1 - (allMsgs.length - i - 1) * 0.05;
     msg.style.opacity = fade < 0.3 ? 0.3 : fade;
   });
 });
 
-// Typing indicator
+// Typing indicators
 let typingUsers = [];
-socket.on("typing", user => {
+channel.subscribe("typing", (msg) => {
+  const user = msg.data.user;
   if(!typingUsers.includes(user) && user !== username) typingUsers.push(user);
   updateTyping();
 });
-socket.on("stopTyping", user => {
+channel.subscribe("stopTyping", (msg) => {
+  const user = msg.data.user;
   typingUsers = typingUsers.filter(u => u!==user);
   updateTyping();
 });
+
 function updateTyping() {
   if(typingUsers.length === 0) typingDiv.textContent = "";
   else typingDiv.textContent = typingUsers.join(", ") + " is typing...";
 }
 
+// Send leave message on unload
 window.addEventListener("beforeunload", () => {
-  socket.emit("chat message", `${username} has left the chat`);
+  channel.publish("chat", {user: username, text: `${username} has left the chat`, type: "leave"});
+});
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GitHub Pages Chat</title>
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  color: #fff;
+}
+h1 {
+  margin: 20px;
+  font-size: 2rem;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+.chat-container {
+  background: rgba(0,0,0,0.5);
+  border-radius: 15px;
+  padding: 20px;
+  width: 90%;
+  max-width: 900px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+#messages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+#messages li {
+  padding: 12px 18px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  word-wrap: break-word;
+  max-width: 70%;
+  display: inline-block;
+  color: #fff;
+  transition: background-color 0.5s, opacity 0.5s;
+  box-shadow: 1px 1px 5px rgba(0,0,0,0.3);
+  font-size: 1.1rem;
+}
+#messages li.self {
+  align-self: flex-end;
+  text-align: right;
+}
+#messages li.join-leave {
+  background: rgba(255,255,255,0.2);
+  text-align: center;
+  font-style: italic;
+  max-width: 100%;
+  align-self: center;
+}
+form {
+  display: flex;
+  margin-top: 10px;
+}
+input {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px 0 0 10px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+}
+button {
+  padding: 14px 25px;
+  border-radius: 0 10px 10px 0;
+  border: none;
+  background: linear-gradient(45deg,#ff5e62,#ff9966);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover { opacity: 0.85; }
+.timestamp {
+  display: block;
+  font-size: 0.75em;
+  color: #ccc;
+  margin-top: 2px;
+}
+#typing {
+  font-style: italic;
+  color: #ffd700;
+  margin: 5px 0;
+  min-height: 20px;
+}
+@media (min-width: 768px) {
+  #messages li { max-width: 60%; font-size: 1.2rem; }
+  input { font-size: 1.1rem; }
+  button { font-size: 1.1rem; }
+}
+</style>
+</head>
+<body>
+<h1>GitHub Pages Chat</h1>
+<div class="chat-container">
+  <ul id="messages"></ul>
+  <div id="typing"></div>
+  <form id="form">
+    <input id="input" autocomplete="off" placeholder="Type your message..." />
+    <button>Send</button>
+  </form>
+</div>
+
+<!-- Ably Realtime SDK -->
+<script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+<script>
+const messages = document.getElementById("messages");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const typingDiv = document.getElementById("typing");
+
+// Replace this with your Ably API Key
+const ably = new Ably.Realtime("H-3EGw.HfEpFA:siMMYKpPVOkBPxTFgTCZmx1EWzEzCHVbY0sJX8l3p8A
+");
+const channel = ably.channels.get("chat-room");
+
+// Random color for user
+function randomColor() {
+  const colors = ["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#845EC2","#FF9671","#00C9A7"];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+
+// Ask for username
+let username = "";
+while(!username) username = prompt("Enter your username:");
+const userColor = randomColor();
+
+// Send join message
+channel.publish("chat", {user: username, text: `${username} has joined the chat`, type: "join"});
+
+// Track typing
+let typingTimeout;
+input.addEventListener("input", () => {
+  channel.publish("typing", {user: username});
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => channel.publish("stopTyping", {user: username}), 1000);
+});
+
+// Send message
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  if(input.value){
+    channel.publish("chat", {user: username, text: input.value, color: userColor, type: "message"});
+    input.value = "";
+    channel.publish("stopTyping", {user: username});
+  }
+});
+
+// Receive chat messages
+channel.subscribe("chat", (msg) => {
+  const li = document.createElement("li");
+  const data = msg.data;
+  
+  if(data.type === "join" || data.type === "leave") {
+    li.className = "join-leave";
+    li.textContent = data.text;
+  } else {
+    li.textContent = `${data.user}: ${data.text}`;
+    const timestamp = document.createElement("span");
+    timestamp.className = "timestamp";
+    const time = new Date();
+    timestamp.textContent = time.getHours().toString().padStart(2,'0') + ":" + time.getMinutes().toString().padStart(2,'0');
+    li.appendChild(timestamp);
+
+    li.style.backgroundColor = data.color;
+    li.style.color = "#fff";
+    if(data.user === username) li.classList.add("self");
+  }
+
+  messages.appendChild(li);
+  messages.scrollTop = messages.scrollHeight;
+
+  // Smooth fading older messages
+  const allMsgs = messages.querySelectorAll("li");
+  allMsgs.forEach((msg,i) => {
+    const fade = 1 - (allMsgs.length - i - 1) * 0.05;
+    msg.style.opacity = fade < 0.3 ? 0.3 : fade;
+  });
+});
+
+// Typing indicators
+let typingUsers = [];
+channel.subscribe("typing", (msg) => {
+  const user = msg.data.user;
+  if(!typingUsers.includes(user) && user !== username) typingUsers.push(user);
+  updateTyping();
+});
+channel.subscribe("stopTyping", (msg) => {
+  const user = msg.data.user;
+  typingUsers = typingUsers.filter(u => u!==user);
+  updateTyping();
+});
+
+function updateTyping() {
+  if(typingUsers.length === 0) typingDiv.textContent = "";
+  else typingDiv.textContent = typingUsers.join(", ") + " is typing...";
+}
+
+// Send leave message on unload
+window.addEventListener("beforeunload", () => {
+  channel.publish("chat", {user: username, text: `${username} has left the chat`, type: "leave"});
 });
 </script>
 </body>
